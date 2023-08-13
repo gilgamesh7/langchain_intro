@@ -9,6 +9,12 @@ from langchain.prompts.chat import(
     HumanMessagePromptTemplate,
     ChatPromptTemplate
 )
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+
+class Country(BaseModel):
+    capital : str = Field(description='Capital of the country')
+    name: str = Field(description='Name of the country')
 
 load_dotenv()
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
@@ -16,6 +22,13 @@ OPENAI_MODEL = os.environ.get('OPENAI_MODEL')
 PROMPT_COUNTRY_INFO = """
     Provide information about {country}.
 """
+PROMPT_COUNTRY_INFO_WITH_INSTRUCTIONS = """
+    Provide information about {country}.
+    {format_instructions}.
+    If the country does not exist make up something.
+"""
+
+
 def setup()-> str:
     try:
         logging.basicConfig(level=logging.INFO, format="[{asctime}] - {funcName} - {lineno} - {message}", style='{')
@@ -77,6 +90,19 @@ def main():
         response = llm(chat_prompt_with_values.to_messages())
 
         logger.info(f"Human prompt + Chat Prompt Template : {response}")
+
+        '''
+            Return Pydantic response
+        '''
+        parser = PydanticOutputParser(pydantic_object=Country)
+        message = HumanMessagePromptTemplate.from_template(template=PROMPT_COUNTRY_INFO_WITH_INSTRUCTIONS)
+        chat_prompt = ChatPromptTemplate.from_messages(messages=[message])
+        chat_prompt_with_values = chat_prompt.format_prompt(country=country, format_instructions=parser.get_format_instructions())
+        response = llm(chat_prompt_with_values.to_messages())
+        data = parser.parse(response.content)
+
+        logger.info(f"Human prompt + Chat Prompt Template + Pydantic class: {data}")
+        logger.info(f"Human prompt + Chat Prompt Template + Pydantic class: {data.capital}")
 
     except Exception as error:
         logger.error(f"{type(error).__name__} - {error}")   
