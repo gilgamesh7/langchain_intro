@@ -11,6 +11,8 @@ from langchain.prompts.chat import(
 )
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
+from langchain.chains.api import open_meteo_docs
+from langchain.chains import APIChain
 
 class Country(BaseModel):
     capital : str = Field(description='Capital of the country')
@@ -103,6 +105,14 @@ def main():
 
         logger.info(f"Human prompt + Chat Prompt Template + Pydantic class: {data}")
         logger.info(f"Human prompt + Chat Prompt Template + Pydantic class: {data.capital}")
+
+        '''
+            Get llm to call an API for you
+        '''
+        chain_new = APIChain.from_llm_and_api_docs(llm, open_meteo_docs.OPEN_METEO_DOCS, verbose=False)
+        result = chain_new.run("What is the weather like right now in Auckland New Zealand in degrees Celcius")
+        logger.info(f"API Chain weather for AKL : {result}")
+
 
     except Exception as error:
         logger.error(f"{type(error).__name__} - {error}")   
